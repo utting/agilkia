@@ -322,6 +322,44 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(1, len(traces2[1]))
         self.assertEqual(3, len(traces2[2]))
 
+    def test_events_filtered(self):
+        ev9 = agilkia.Event("someAction", {}, {}, {"key": 3})
+        ev10 = agilkia.Event("someAction", {}, {}, {"key": '3'})
+        ev11 = agilkia.Event("someAction", {}, {}, {})
+        ev12 = agilkia.Event("someAction", {"key": 3}, {}, {})
+        ev13 = agilkia.Event("otherAction", {}, {}, {"key": 3})
+        ev14 = agilkia.Event("anotherAction", {}, {}, {"key": 'something different'})
+
+        trace1 = agilkia.Trace([ev9, ev10, ev11, ev12, ev13])
+        traces1 = agilkia.TraceSet([trace1])
+        traces1f1 = traces1.with_events_filtered('key', 3)
+        self.assertEqual(1, len(traces1f1))
+        self.assertEqual(2, len(traces1f1[0]))
+        self.assertEqual(ev9, traces1f1[0][0])
+        self.assertEqual(ev13, traces1f1[0][1])
+
+        traces1f2 = traces1.with_events_filtered('key', '3')
+        self.assertEqual(1, len(traces1f2))
+        self.assertEqual(1, len(traces1f2[0]))
+        self.assertEqual(ev10, traces1f2[0][0])
+
+        # check behavior with empty trace
+        trace2p1 = agilkia.Trace([ev9, ev10])
+        trace2p2 = agilkia.Trace([ev14])
+        trace2p3 = agilkia.Trace([ev12, ev13])
+        trace2p4 = agilkia.Trace([])
+        traces2 = agilkia.TraceSet([trace2p1, trace2p2, trace2p3, trace2p4])
+        traces2f1 = traces2.with_events_filtered('key', 3)
+        self.assertEqual(3, len(traces2f1))
+        self.assertEqual(1, len(traces2f1[0]))
+        self.assertEqual(1, len(traces2f1[1]))
+        self.assertEqual(0, len(traces2f1[2]))
+
+        traces2f2 = traces2.with_events_filtered('key', 3, removeEmptyTrace=False)
+        self.assertEqual(4, len(traces2f2))
+        self.assertEqual(0, len(traces2f2[1]))
+        self.assertEqual(0, len(traces2f2[3]))
+
     def test_group_input(self):
         ev3b = agilkia.Event("Pay", {"Name": "Merry", "Amount": 23.45}, {"Status": 0})
         # each different "Name" input will be grouped into a new trace

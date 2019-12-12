@@ -550,6 +550,32 @@ class TraceSet:
                 traces2.append(Trace(event_list))
         return traces2
 
+    def with_events_filtered(
+            self,
+            name: str,
+            value,
+            removeEmptyTrace: bool = True) -> 'TraceSet':
+        """Filter the events to keep only those with a specific value in the meta data.
+
+        Args:
+            name: the name of the meta data
+            value: the expected value for the meta data. Events with another value are discarded.
+            removeEmptyTrace: removes traces in which all events were removed.
+
+        Returns:
+            A new TraceSet in which all events have the meta data ``name`` with value ``value``.
+        """
+        # TODO: update meta data with filter info ?
+        newTraces = TraceSet([], self.meta_data)
+        for trace in self:
+            newTrace = Trace([], trace.meta_data)
+            for event in trace:
+                if event.meta_data.get(name) == value:
+                    newTrace.append(event)
+            if not removeEmptyTrace or len(newTrace) > 0 or len(trace) == 0:
+                newTraces.append(newTrace)
+        return newTraces
+
     def get_all_actions(self):
         """Returns a sorted list (with duplicates removed) of all the keys in data."""
         actions = set()

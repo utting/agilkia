@@ -322,6 +322,48 @@ class TestTrace(unittest.TestCase):
         self.assertEqual(1, len(traces2[1]))
         self.assertEqual(3, len(traces2[2]))
 
+    def test_split_delay(self):
+        ev5 = agilkia.Event("oldAction", {}, {}, {'timestamp': datetime.datetime(1970, 1, 1, 0, 0, 32).isoformat()})
+        ev6 = agilkia.Event("recentAction", {}, {}, {'timestamp': datetime.datetime(2020, 2, 16, 12, 15, 00).isoformat()})
+        ev7 = agilkia.Event("otherRecentAction", {}, {}, {'timestamp': datetime.datetime(2020, 2, 16, 13, 15, 00).isoformat()})
+        ev8 = agilkia.Event("noTimestampedAction", {}, {})
+
+        trace1 = agilkia.Trace([ev5, ev6, ev7, ev7])
+        traces1 = agilkia.TraceSet([trace1])
+        traces1s1 = traces1.with_traces_split(delay=datetime.timedelta(minutes=30))
+        self.assertEqual(3, len(traces1s1))
+        self.assertEqual(1, len(traces1s1[0]))
+        self.assertEqual(1, len(traces1s1[1]))
+        self.assertEqual(2, len(traces1s1[2]))
+
+        traces1s2 = traces1.with_traces_split(delay=datetime.timedelta(hours=30))
+        self.assertEqual(2, len(traces1s2))
+        self.assertEqual(1, len(traces1s2[0]))
+        self.assertEqual(3, len(traces1s2[1]))
+
+        trace2 = agilkia.Trace([ev5, ev8, ev6, ev8, ev7])
+        traces2 = agilkia.TraceSet([trace2])
+        traces2s1 = traces2.with_traces_split(delay=datetime.timedelta(minutes=45))
+        # several behaviors can be selected :
+        # + remove events without timestamp
+        # + cut at each event without timestamp
+        # + cut only at the first ev8 (it make sense because there is 50 years between ev5 and
+        #   ev6 which is to long for being the same trace, but there is only 1 hour between ev6
+        #   and ev7 and if the ev8 happened right in the middle of them, we should not cut the
+        #   trace because 30 minutes is less than 45 minutes). However we do not know if the first
+        #   ev8 should be in first trace, in second trace with ev6 or alone in second trace and
+        #   ev6 in third trace.
+        # So, this one remains TODO until something is decided
+
+        trace3p1 = agilkia.Trace([ev5, ev6])
+        trace3p2 = agilkia.Trace([ev7, ev7])
+        traces3 = agilkia.TraceSet([trace3p1, trace3p2])
+        traces3s1 = traces3.with_traces_split(delay=datetime.timedelta(days=500000))
+        # check whether the traces are concatenated
+        self.assertEqual(2, len(traces3s1))
+        self.assertEqual(2, len(traces3s1[0]))
+        self.assertEqual(2, len(traces3s1[1]))
+
     def test_events_filtered(self):
         ev9 = agilkia.Event("someAction", {}, {}, {"key": 3})
         ev10 = agilkia.Event("someAction", {}, {}, {"key": '3'})

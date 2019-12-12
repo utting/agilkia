@@ -487,8 +487,7 @@ class TraceSet:
                 }
             arff.dump(contents, output)
 
-    def with_traces_split(self, start_action: str = None, input_name: str = None,
-                          comparator=None) -> 'TraceSet':
+    def with_traces_split(self, start_action: str = None, input_name: str = None) -> 'TraceSet':
         """Returns a new TraceSet with each trace in this set split into shorter traces.
 
         It accepts several split criteria, and will start a new trace whenever any
@@ -504,7 +503,7 @@ class TraceSet:
             a new TraceSet, usually with more traces and shorter traces.
         """
         if start_action is None and input_name is None:
-            raise Exception("split_traces requires at least one split criteria.")
+            raise Exception("with_traces_split requires at least one split criteria.")
         traces2 = TraceSet([], self.meta_data)
         # TODO: update meta data with split info?
         for old in self.traces:

@@ -6,7 +6,7 @@ build-backend = "flit.buildapi"
 module = "agilkia"
 author = "Mark Utting"
 author-email = "utting@usc.edu.au"
-home-page = "https://github.com/utting/bus-testing"
+home-page = "https://github.com/utting/agilkia"
 description-file = "README.md"
 classifiers = [
     "License :: OSI Approved :: MIT License",

@@ -33,3 +33,5 @@ from . random_tester import (read_input_rules, uniq, build_interface, print_sign
 from . json_traces import (Event, Trace, TraceSet, TraceEncoder, TRACE_SET_VERSION,
                            MetaData, xml_decode, all_action_names, safe_name,
                            default_map_to_chars, trace_to_string, traces_to_pandas)
+from . scanette_utils import (ScanetteModel)
+from . utils import (Color, ColorList)

@@ -140,6 +140,15 @@ with Path("clusters_out.txt").open("w") as out:
         for tr in traceset3.get_cluster(i):
             out.write(f"    {tr}\n")
 
+# %% Visualize the coverage of each cluster (the better is to have non-overlapping coverage)
+
+print("Drawing coverage of scanette model by each cluster - see coverage_cluster_<>.svg")
+scanetteModel = agilkia.ScanetteModel("scanette.dot")
+for i in range(num_clusters):
+    plot = scanetteModel.plotableModel()
+    plot.plotSequencesWithColors(traceset3.get_cluster(i), agilkia.Color(50, 100, 255))
+    plot.export("coverage_cluster_{}.svg".format(i))
+
 # %% Count number of traces in each cluster
 
 counts = Counter(traceset3.get_clusters())

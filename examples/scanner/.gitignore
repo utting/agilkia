@@ -6,3 +6,4 @@ test_clusters.pdf
 tests_split.json
 tree.dot
 tree.png
+coverage_cluster_*.svg

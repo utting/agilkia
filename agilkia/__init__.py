@@ -35,3 +35,4 @@ from . json_traces import (Event, Trace, TraceSet, TraceEncoder, TRACE_SET_VERSI
                            default_map_to_chars, trace_to_string, traces_to_pandas)
 from . scanette_utils import (ScanetteModel)
 from . utils import (Color, ColorList)
+from . hmm_utils import (HMM_ClusterAlgo, Graph)

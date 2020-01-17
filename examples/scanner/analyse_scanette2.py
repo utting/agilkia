@@ -178,6 +178,19 @@ traceset3.visualize_clusters(algorithm=vis, xlim=xlim, ylim=ylim,
                              filename="scanette_clusters.pdf",
                              block=(not TEST_MODE))
 
+# %% To make cluster based on an HMM method, use the folowing lines (the API need to be fixed)
+
+print("Computing clusters with a method based on HMM models")
+hmm_clusterer = agilkia.HMM_ClusterAlgo(K=3, states=5)
+hmm_clusterer.fit(traceset3)
+hmm_clusters = hmm_clusterer.predict(traceset3) # This return a list of labels for the traces
+counts = Counter(hmm_clusters)
+count_pairs = sorted(list(counts.items()))
+print("cluster sizes:")
+for c,n in count_pairs:
+    print(f"    {c:3d}  {n:4d}")
+hmm_clusterer.visualize(traceset3).exportSingle("hmm_clusters.svg")
+
 # %% Print PCA dimensions
 
 # print(traceset3.get_event_chars())

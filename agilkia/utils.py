@@ -4,6 +4,51 @@ from typing import Optional
 import random
 
 
+class MinList:
+    def __init__(self, size):
+        """Create a list of minimals values and the indexes associated with thoses values
+        :para size: the number of values to keep
+        """
+        assert size > 0
+        self.values = []
+        self.indexes = []
+        self.size = size
+
+    def insert(self, value, index=None):
+        """add a new value and its index in the list
+        :param value: the value to keep if beeing in the smallest of the list
+        :param index: the index associated to this value
+        """
+        if len(self.values) == 0:
+            self.values.append(value)
+            self.indexes.append(index)
+            return
+        last = len(self.values) - 1
+        if value > self.values[last] and len(self.values) >= self.size:
+            return
+        if len(self.values) < self.size:
+            self.values.append(value)
+            self.indexes.append(index)
+        pos = len(self.values) - 2
+        while pos >= 0 and self.values[pos] > value:
+            self.values[pos + 1] = self.values[pos]
+            self.indexes[pos + 1] = self.indexes[pos]
+            pos -= 1
+        self.values[pos + 1] = value
+        self.indexes[pos + 1] = index
+
+    def pick(self):
+        """remove the minimal value and its associated index from the list and return them
+        """
+        if len(self.values) == 0:
+            return
+        value = self.values[0]
+        index = self.indexes[0]
+        self.values = self.values[1:]
+        self.indexes = self.indexes[1:]
+        return value, index
+
+
 class Color:
     def __init__(self, r: int, g: int, b: int, alpha: Optional[int] = None):
         """

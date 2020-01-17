@@ -5,6 +5,43 @@ from agilkia.utils import *
 import unittest
 
 
+class TestMinList(unittest.TestCase):
+    def test_values(self):
+        values = [4, 5, 2, 3, 9, 4, 6, 34, 56, 23]
+        size = 5
+
+        minList = MinList(size)
+        for value in values:
+            minList.insert(value)
+
+        values.sort()
+        for expectedValue in values[:size]:
+            value, index = minList.pick()
+            self.assertEqual(value, expectedValue)
+
+    def test_with_indexes(self):
+        values = [45, 6, 1, 78, 23, 1, 56, 0]
+        indexes = [0, 1, 2, 3, 4, 5, 6, 7]
+
+        minList = MinList(3)
+        for i in range(len(values)):
+            minList.insert(values[i], indexes[i])
+
+        value, index = minList.pick()
+        self.assertEqual(value, 0)
+        self.assertEqual(index, 7)
+
+        value, index = minList.pick()
+        self.assertEqual(value, 1)
+        self.assertIn(index, [2, 5])
+        prevIndex = index
+
+        value, index = minList.pick()
+        self.assertEqual(value, 1)
+        self.assertIn(index, [2, 5])
+        self.assertNotEqual(index, prevIndex)
+
+
 class TestColor(unittest.TestCase):
     def test_average(self):
         color1 = Color(255, 0, 245)

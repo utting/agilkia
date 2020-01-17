@@ -6,8 +6,9 @@ import platform
 import os
 import json
 import numpy as np
+from typing import Iterable, List, NoReturn, NewType, Optional, Tuple
 from . utils import *
-from typing import List, NoReturn, NewType, Optional, Tuple
+import agilkia
 
 
 Probability = float
@@ -313,6 +314,10 @@ class HMM:
 
 
 class HMM_hmmlearn(HMM):
+    """
+    An implementation of class HMM based on library hmmlearn.
+    """
+
     def __init__(self, states: int, symbols: Optional[List[ExternalSymbol]] = None):
         self._model = hmmlearn.hmm.MultinomialHMM(n_components=states)
         self._symbolsDict = symbols
@@ -652,6 +657,10 @@ def simplify(
 
 
 class dotTransition:
+    """
+    Represent a transition for a `Graph`.
+    """
+
     def __init__(
             self,
             fromS,
@@ -669,6 +678,10 @@ class dotTransition:
 
 
 class Graph:
+    """
+    This class aims to represent an HMM model with the possibility of adding other informations in the representation.
+    """
+
     def __init__(self, hmm):
         self.hmm = hmm
         self.transitionThresold = 0.05
@@ -743,13 +756,23 @@ class Graph:
                         initials[init]),
                     fromInitial=True))
 
-    def exportSingle(self, filename):
+    def exportSingle(self, filename: str) -> NoReturn:
+        """
+        Export this graph to a dot file.
+        This is a shortcut from the class DotFile.
+        """
         dotFile = DotFile(filename)
         dotFile.addGraph(self)
         dotFile.export()
 
-    def toDot(self, dotStream, graphID):
-        """ a method which should be called by a DotFile object
+    def toDot(self, dotStream, graphID: str):
+        """
+        Write this graph to a dot stream.
+        This method should be called by a DotFile object.
+
+        Args:
+            dotStream: the stream to write the data
+            graphID: an identifiant used to avoid duplicate node name when several graph are ploted in the same DotFile
         """
         def nodeName(i):
             return "node_{}_{}".format(i, graphID)
@@ -833,7 +856,14 @@ class Graph:
 
 
 class DotFile:
-    def __init__(self, filename):
+    """
+    This class represent a dot file in which several Graph can be written.
+    """
+
+    def __init__(self, filename: str):
+        if not filename.endswith(".dot"):
+            print("{} need a dot file as a parameter, not '{}'.".format(str(__class__), filename))
+            filename = filename + ".dot"
         self.fileName = filename
         self.graphs = []
 
@@ -868,15 +898,7 @@ class DotFile:
                     ["dot", formatOption, self.fileName]))
 
 
-class ClusterAlgo:
-    def fit(self, traces: 'TraceSet'):
-        raise NotImplementedError()
-
-    def generate(self) -> 'Trace':
-        raise NotImplementedError()
-
-
-class HMM_ClusterAlgo(ClusterAlgo):
+class HMM_ClusterAlgo:
 
     def __init__(self, K: int = 2, states: int = 5):
         """
@@ -893,9 +915,14 @@ class HMM_ClusterAlgo(ClusterAlgo):
         self._symbols = None
         self._models = None
         self._bigModel = None
-        self.eventToSymbol = lambda event: event.action + str(event.outputs.get('Status',''))
+        self.eventToSymbol = lambda event: ExternalSymbol(event.action + str(event.outputs.get('Status', '')))
 
-    def tracesSetToSymbolSeq(self, traces: 'TraceSet') -> List[List[str]]:
+    def tracesSetToSymbolSeq(self, traces: Iterable[agilkia.Trace]) -> List[List[ExternalSymbol]]:
+        """
+        Convert an agilkia Trace to a list of symbol list which can be used by HMM.
+
+        This is based on method `eventToSymbol` to translate each event, this method can be changed before a call to `fit` to change which events are considered equals.
+        """
         seqs = []
         for trace in traces:
             seq = []
@@ -904,14 +931,20 @@ class HMM_ClusterAlgo(ClusterAlgo):
             seqs.append(seq)
         return seqs
 
-    def getSymbols(self, traces: 'TraceSet') -> List[str]:
+    def getSymbols(self, traces: Iterable[agilkia.Trace]) -> List[ExternalSymbol]:
+        """
+        Get the list of symbols used in the traces.
+        """
         symbols = set()
         for seq in traces:
             for event in seq:
                 symbols.add(self.eventToSymbol(event))
         return list(symbols)
 
-    def fit(self, traces):
+    def fit(self, traces: agilkia.TraceSet) -> NoReturn:
+        """
+        Train the clusterer on some data. This is mandatory before a call to `predict`.
+        """
         self._bigModel = None
         # statesToCluster is a mapping from states of bigModel to cluster. A trace
         # will be assigned to the cluster corresponding to the first state used in
@@ -963,7 +996,8 @@ class HMM_ClusterAlgo(ClusterAlgo):
         self._bigModel = HMM.assembleModels(self._models)
         self._bigModel.train(fitSeqs)
 
-    def _predictOnModels(self, sequences: List[List[str]]) -> (List[List[List[str]]], List[int], MinList):
+    def _predictOnModels(self, sequences: List[List[ExternalSymbol]]
+                         ) -> (List[List[List[ExternalSymbol]]], List[int], MinList):
         """split sequences depending on which model has the highest probability of emitting it.
 
         Returns:
@@ -993,7 +1027,7 @@ class HMM_ClusterAlgo(ClusterAlgo):
             farest.insert(max_log, i)
         return sortedSeqs, modelsIndices, farest
 
-    def _predict(self, sequences: List[List[str]]) -> List[int]:
+    def _predict(self, sequences: List[List[ExternalSymbol]]) -> List[int]:
         labels = np.ndarray(shape=(len(sequences),), dtype=int)
         viterbi = self._bigModel.getMostProbableStates(sequences)
         for i in range(len(sequences)):
@@ -1003,7 +1037,17 @@ class HMM_ClusterAlgo(ClusterAlgo):
             labels[i] = self._statesToCluster[state]
         return labels
 
-    def checkFittedForTraceSet(self, traceSet: 'TraceSet') -> List[List[str]]:
+    def checkFittedForTraceSet(self, traceSet: agilkia.TraceSet) -> List[List[ExternalSymbol]]:
+        """
+        Checks if the clusterer is correctly fitted to work on the given TraceSet
+
+        Args:
+            traceSet: the traces to check
+
+        Returns:
+            The traces as a list of symbols list.
+            If the traces are incorrect, an error is thrown.
+        """
         if self._bigModel is None:
             raise RuntimeError("The model was not trained before predicting the sequences.")
         seqs = self.tracesSetToSymbolSeq(traceSet)
@@ -1016,11 +1060,22 @@ class HMM_ClusterAlgo(ClusterAlgo):
                 symbols.difference(set(self._symbols))))
         return seqs
 
-    def predict(self, traces: 'TraceSet') -> List[int]:
+    def predict(self, traces: agilkia.TraceSet) -> List[int]:
+        """
+        Indicate which cluster contain each Trace.
+
+        This clusterer must have been trained before with a call to `fit`.
+
+        Args:
+            traces: the traces to separate into cluster
+
+        Returns:
+            a list of cluster indices.
+        """
         seqs = self.checkFittedForTraceSet(traces)
         return self._predict(seqs)
 
-    def visualize(self, traceSet: 'TraceSet', colors: ColorList = ColorList(), simplifyModel=True) -> Graph:
+    def visualize(self, traceSet: agilkia.TraceSet, colors: ColorList = ColorList(), simplifyModel=True) -> Graph:
         """
         Produces a graph with the model and draws the traces on it.
 
@@ -1030,6 +1085,9 @@ class HMM_ClusterAlgo(ClusterAlgo):
             simplifyModel : draw a simplified model.
                 However, the clustering is made on the real model and thus, the
                 clusters (identified by colors) may be mixed on the simplified graph.
+
+        Returns:
+            a Graph (which can be exported in dot format by a call to `Graph.exportSingle()`)
         """
         seqs = self.checkFittedForTraceSet(traceSet)
         labels = self._predict(seqs)

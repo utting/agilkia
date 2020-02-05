@@ -1,4 +1,6 @@
 cust_vs_tests_log.pdf
+hmm_clusters.svg
+hmm_clusters.dot
 log_one.json
 log_split.json
 scanette_clusters.pdf
@@ -6,3 +8,4 @@ test_clusters.pdf
 tests_split.json
 tree.dot
 tree.png
+coverage_cluster_*.svg

@@ -487,8 +487,7 @@ class TraceSet:
                 }
             arff.dump(contents, output)
 
-    def with_traces_split(self, start_action: str = None, input_name: str = None,
-                          comparator=None) -> 'TraceSet':
+    def with_traces_split(self, start_action: str = None, input_name: str = None, delay: datetime.timedelta = None) -> 'TraceSet':
         """Returns a new TraceSet with each trace in this set split into shorter traces.
 
         It accepts several split criteria, and will start a new trace whenever any
@@ -499,22 +498,40 @@ class TraceSet:
             input_name: the name of an input.  Whenever the value of this input
                 changes, then a new trace should be started.  Note that events
                 with this input missing are ignored for this splitting criteria.
+            delay: cut the trace if two events are separated by a duration longer
+                than delay. This suppose that each trace is ordered (which is
+                the case most of the time when you work with logs).
 
         Returns:
             a new TraceSet, usually with more traces and shorter traces.
         """
-        if start_action is None and input_name is None:
-            raise Exception("split_traces requires at least one split criteria.")
+        if start_action is None and input_name is None and delay is None :
+            raise Exception("with_traces_split requires at least one split criteria.")
         traces2 = TraceSet([], self.meta_data)
         # TODO: update meta data with split info?
         for old in self.traces:
             curr_trace = Trace([])
             traces2.append(curr_trace)
             prev_input = None
+            prev_timestamp = None
             for event in old:
                 input_value = event.inputs.get(input_name, None)
                 input_changed = input_value != prev_input and input_value is not None
-                if (event.action == start_action or input_changed) and len(curr_trace) > 0:
+                delay_elapsed = False
+                if delay is not None:
+                    timestamp = event.meta_data.get('timestamp')
+                    if timestamp is not None:
+                        # the parsing of date should be done with
+                        # dateutil.parser but it is under BSD licsence and
+                        # compatibility should be checked. The method
+                        # fromisoformat() is discouraged here :
+                        # https://docs.python.org/dev/library/datetime.html#datetime.datetime.fromisoformat
+                        timestamp = datetime.datetime.fromisoformat(timestamp)
+                        if prev_timestamp is not None and timestamp-prev_timestamp > delay:
+                            delay_elapsed = True
+                    prev_timestamp = timestamp
+    
+                if (event.action == start_action or input_changed or delay_elapsed) and len(curr_trace) > 0:
                     curr_trace = Trace([])
                     traces2.append(curr_trace)
                 curr_trace.append(event)
@@ -550,6 +567,32 @@ class TraceSet:
             for event_list in groups.values():
                 traces2.append(Trace(event_list))
         return traces2
+
+    def with_events_filtered(
+            self,
+            name: str,
+            value,
+            removeEmptyTrace: bool = True) -> 'TraceSet':
+        """Filter the events to keep only those with a specific value in the meta data.
+
+        Args:
+            name: the name of the meta data
+            value: the expected value for the meta data. Events with another value are discarded.
+            removeEmptyTrace: removes traces in which all events were removed.
+
+        Returns:
+            A new TraceSet in which all events have the meta data ``name`` with value ``value``.
+        """
+        # TODO: update meta data with filter info ?
+        newTraces = TraceSet([], self.meta_data)
+        for trace in self:
+            newTrace = Trace([], trace.meta_data)
+            for event in trace:
+                if event.meta_data.get(name) == value:
+                    newTrace.append(event)
+            if not removeEmptyTrace or len(newTrace) > 0 or len(trace) == 0:
+                newTraces.append(newTrace)
+        return newTraces
 
     def get_all_actions(self):
         """Returns a sorted list (with duplicates removed) of all the keys in data."""

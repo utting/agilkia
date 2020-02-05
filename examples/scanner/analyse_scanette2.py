@@ -140,6 +140,15 @@ with Path("clusters_out.txt").open("w") as out:
         for tr in traceset3.get_cluster(i):
             out.write(f"    {tr}\n")
 
+# %% Visualize the coverage of each cluster (the better is to have non-overlapping coverage)
+
+print("Drawing coverage of scanette model by each cluster - see coverage_cluster_<>.svg")
+scanetteModel = agilkia.ScanetteModel("scanette.dot")
+for i in range(num_clusters):
+    plot = scanetteModel.plotableModel()
+    plot.plotSequencesWithColors(traceset3.get_cluster(i), agilkia.Color(50, 100, 255))
+    plot.export("coverage_cluster_{}.svg".format(i))
+
 # %% Count number of traces in each cluster
 
 counts = Counter(traceset3.get_clusters())
@@ -168,6 +177,37 @@ traceset3.visualize_clusters(algorithm=vis, xlim=xlim, ylim=ylim,
                              markersize=9,
                              filename="scanette_clusters.pdf",
                              block=(not TEST_MODE))
+
+# %% To make cluster based on an HMM method, use the folowing lines (the API need to be fixed)
+
+print("Computing clusters with a method based on HMM models")
+# we set number of cluster to 3 and models size to 5. Better results can
+# be obtained with higher values but it will take more time, so, for this
+# sample script we keep it quick
+hmm_clusterer = agilkia.HMM_ClusterAlgo(K=3, states=5)
+
+
+def eventToSymbol(event: agilkia.Event) -> str:
+    """
+    Transform an event from a scanette trace to a symbol for HMM.
+    Several version of this method can be writtent depending on what is wanted in the model.
+    """
+    symbol = event.action
+    status = event.outputs.get('Status')
+    if status is not None and event.action != 'payer':
+        symbol += " " + str(int(status))
+    return symbol
+
+
+hmm_clusterer.eventToSymbol = eventToSymbol
+hmm_clusterer.fit(traceset3)
+hmm_clusters = hmm_clusterer.predict(traceset3)  # This return a list of labels for the traces
+counts = Counter(hmm_clusters)
+count_pairs = sorted(list(counts.items()))
+print("cluster sizes:")
+for c, n in count_pairs:
+    print(f"    {c:3d}  {n:4d}")
+hmm_clusterer.visualize(traceset3).exportSingle("hmm_clusters.dot")
 
 # %% Print PCA dimensions
 
